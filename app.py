@@ -315,219 +315,169 @@ elif page == "production":
     # LIGNE 01 — KPIs + GRAPHES (STYLE POWER BI)
     # ============================================================
 
-    # ============================================================
-# FONCTION POUR CRÉER LES CARTES HTML STYLISÉES
-# ============================================================
+    col1, col2, col3 = st.columns(3)
 
-def create_material_kpi_card(title, icon, total_value, avg_day, avg_month, percentage=None, color="#667eea"):
-    """
-    Crée une carte KPI stylisée pour les matériaux/outputs
-    """
-    percentage_section = ""
-    if percentage is not None:
-        percentage_section = f"""
-        <div style="background: rgba(16,185,129,0.15); border-radius:8px; padding:8px; text-align:center;">
-            <div style="font-size:9px; color:#047857;">% DU TOTAL RM</div>
-            <div style="font-size:15px; font-weight:800; color:#10b981;">{percentage:.1f} %</div>
-        </div>
-        """
-    
-    html_content = f"""
-    <div style="background: rgba(120,120,120,0.10); border: 1px solid rgba(200,200,200,0.35); border-radius: 14px; padding: 14px 16px; height: 240px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 3px 12px rgba(0,0,0,0.08);">
-        <div style="display:flex; align-items:center; gap:8px;">
-            <div style="font-size:18px;">{icon}</div>
-            <div style="font-size:12px; font-weight:600; color:#555; text-transform: uppercase;">{title}</div>
-        </div>
-        <div style="font-size:34px; font-weight:800; color:#111; text-align:center; margin: 6px 0;">
-            {total_value} <span style="font-size:14px;">T</span>
-        </div>
-        <div style="display:flex; gap:10px;">
-            <div style="flex:1; background: rgba(160,160,160,0.12); border-radius:8px; padding:8px; text-align:center;">
-                <div style="font-size:9px; color:#666;">MOY / JOUR</div>
-                <div style="font-size:13px; font-weight:700;">{avg_day} T/j</div>
-            </div>
-            <div style="flex:1; background: rgba(160,160,160,0.12); border-radius:8px; padding:8px; text-align:center;">
-                <div style="font-size:9px; color:#666;">MOY / MOIS</div>
-                <div style="font-size:13px; font-weight:700;">{avg_month} T/mois</div>
-            </div>
-        </div>
-        {percentage_section}
-    </div>
-    """
-    return html_content
+    # ===================== COL 1 : RAW MATERIAL =====================
+    with col1:
+        st.subheader("📦 Raw Material")
 
+        st.metric("Total RM", f"{format_k(total_rm)} T")
+        st.metric("Moyenne / Jour", f"{format_k(rm_day_avg)} T/j")
+        st.metric("Moyenne / Mois", f"{format_k(rm_month_avg)} T/mois")
+        st.markdown("---")
 
-# ============================================================
-# CODE PRINCIPAL AVEC LES 3 COLONNES
-# ============================================================
-
-col1, col2, col3 = st.columns(3)
-
-# ===================== COL 1 : RAW MATERIAL =====================
-with col1:
-    # Carte KPI HTML
-    card_html = create_material_kpi_card(
-        title="📦 Raw Material",
-        icon="📦",
-        total_value=format_k(total_rm),
-        avg_day=format_k(rm_day_avg),
-        avg_month=format_k(rm_month_avg),
-        color="#667eea"
-    )
-    st.markdown(card_html, unsafe_allow_html=True)
-    
-    st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
-    
-    # Graphique
-    rm_rep = (
-        df.groupby('Input( Raw material type )')
-        ['Total Prod ( RM consumption ) "ton"']
-        .sum()
-        .reset_index()
-        .sort_values('Total Prod ( RM consumption ) "ton"', ascending=True)
-    )
-
-    fig = go.Figure(go.Bar(
-        y=rm_rep['Input( Raw material type )'],
-        x=rm_rep['Total Prod ( RM consumption ) "ton"'],
-        orientation="h",
-        text=[
-            f"{format_k(v)} T ({v/total_rm*100:.1f}%)"
-            for v in rm_rep['Total Prod ( RM consumption ) "ton"']
-        ],
-        textposition="outside",
-        marker_color="#667eea"
-    ))
-
-    fig.update_layout(
-        height=300,
-        margin=dict(l=10, r=10, t=30, b=10),
-        xaxis=dict(
-            showticklabels=False,
-            showgrid=False,
-            zeroline=False,
-            title=""
-        ),
-        yaxis=dict(
-            title="",
-            automargin=True
+        rm_rep = (
+            df.groupby('Input( Raw material type )')
+            ['Total Prod ( RM consumption ) "ton"']
+            .sum()
+            .reset_index()
+            .sort_values('Total Prod ( RM consumption ) "ton"', ascending=True)  
+            # ← important : ascending=True pour avoir le plus grand en haut en horizontal
         )
-    )
 
-    st.plotly_chart(fig, use_container_width=True)
+        fig = go.Figure(go.Bar(
+            y=rm_rep['Input( Raw material type )'],
+            x=rm_rep['Total Prod ( RM consumption ) "ton"'],
+            orientation="h",
+            text=[
+                f"{format_k(v)} T ({v/total_rm*100:.1f}%)"
+                for v in rm_rep['Total Prod ( RM consumption ) "ton"']
+            ],
+            textposition="outside",
+            marker_color="#667eea"
+        ))
 
+        fig.update_layout(
+            height=300,
+            margin=dict(l=10, r=10, t=30, b=10),
 
-# ===================== COL 2 : OUTPUT 1 =====================
-with col2:
-    # Carte KPI HTML
-    card_html = create_material_kpi_card(
-        title="📤 Output 1 (Export)",
-        icon="📤",
-        total_value=format_k(total_out1),
-        avg_day=format_k(out1_day_avg),
-        avg_month=format_k(out1_month_avg),
-        percentage=pct_out1,
-        color="#f5576c"
-    )
-    st.markdown(card_html, unsafe_allow_html=True)
-    
-    st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
-    
-    # Graphique
-    out1_rep = (
-        df.groupby('OUTPUT 1 ( type of export product )')
-        ['OUTPUT 1 "ton"']
-        .sum()
-        .reset_index()
-        .sort_values('OUTPUT 1 "ton"', ascending=True)
-    )
+            # 🚫 Suppression de l’axe X
+            xaxis=dict(
+                showticklabels=False,
+                showgrid=False,
+                zeroline=False,
+                title=""
+            ),
 
-    fig = go.Figure(go.Bar(
-        y=out1_rep['OUTPUT 1 ( type of export product )'],
-        x=out1_rep['OUTPUT 1 "ton"'],
-        orientation="h",
-        text=[
-            f"{format_k(v)} T ({v/total_rm*100:.1f}%)"
-            for v in out1_rep['OUTPUT 1 "ton"']
-        ],
-        textposition="outside",
-        marker_color="#f5576c"
-    ))
-
-    fig.update_layout(
-        height=300,
-        margin=dict(l=10, r=10, t=30, b=10),
-        xaxis=dict(
-            showticklabels=False,
-            showgrid=False,
-            zeroline=False,
-            title=""
-        ),
-        yaxis=dict(
-            title="",
-            automargin=True
+            # Nettoyage axe Y
+            yaxis=dict(
+                title="",
+                automargin=True
+            )
         )
-    )
 
-    fig.update_traces(cliponaxis=False)
-    st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True)
 
+    # ===================== COL 2 : OUTPUT 1 =====================
+    with col2:
+        st.subheader("📤 Output 1 (Export)")
 
-# ===================== COL 3 : OUTPUT 2 =====================
-with col3:
-    # Carte KPI HTML
-    card_html = create_material_kpi_card(
-        title="📥 Output 2 (Fine)",
-        icon="📥",
-        total_value=format_k(total_out2),
-        avg_day=format_k(out2_day_avg),
-        avg_month=format_k(out2_month_avg),
-        percentage=pct_out2,
-        color="#4facfe"
-    )
-    st.markdown(card_html, unsafe_allow_html=True)
-    
-    st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
-    
-    # Graphique
-    out2_rep = (
-        df.groupby('OUTPUT 2 ( type of seconde output )')
-        ['OUTPUT 2 "ton"']
-        .sum()
-        .reset_index()
-        .sort_values('OUTPUT 2 "ton"', ascending=True)
-    )
+        st.metric("Total Output 1", f"{format_k(total_out1)} T ({pct_out1:.1f}%)")
+        st.metric("Moyenne / Jour", f"{format_k(out1_day_avg)} T/j")
+        st.metric("Moyenne / Mois", f"{format_k(out1_month_avg)} T/mois")
 
-    fig = go.Figure(go.Bar(
-        y=out2_rep['OUTPUT 2 ( type of seconde output )'],
-        x=out2_rep['OUTPUT 2 "ton"'],
-        orientation="h",
-        text=[
-            f"{format_k(v)} T ({v/total_rm*100:.1f}%)"
-            for v in out2_rep['OUTPUT 2 "ton"']
-        ],
-        textposition="outside",
-        marker_color="#4facfe"
-    ))
+        st.markdown("---")
 
-    fig.update_layout(
-        height=300,
-        margin=dict(l=10, r=10, t=30, b=10),
-        xaxis=dict(
-            showticklabels=False,
-            showgrid=False,
-            zeroline=False,
-            title=""
-        ),
-        yaxis=dict(
-            title="",
-            automargin=True
+        out1_rep = (
+            df.groupby('OUTPUT 1 ( type of export product )')
+            ['OUTPUT 1 "ton"']
+            .sum()
+            .reset_index()
+            .sort_values('OUTPUT 1 "ton"', ascending=True)
+            # ↑ ascending=True pour afficher le plus grand en haut
         )
-    )
 
-    fig.update_traces(cliponaxis=False)
-    st.plotly_chart(fig, use_container_width=True)
+        fig = go.Figure(go.Bar(
+            y=out1_rep['OUTPUT 1 ( type of export product )'],
+            x=out1_rep['OUTPUT 1 "ton"'],
+            orientation="h",
+            text=[
+                f"{format_k(v)} T ({v/total_rm*100:.1f}%)"
+                for v in out1_rep['OUTPUT 1 "ton"']
+            ],
+            textposition="outside",
+            marker_color="#f5576c"
+        ))
 
+        fig.update_layout(
+            height=300,
+            margin=dict(l=10, r=10, t=30, b=10),
+
+            # 🚫 Suppression axe X
+            xaxis=dict(
+                showticklabels=False,
+                showgrid=False,
+                zeroline=False,
+                title=""
+            ),
+
+            # Nettoyage axe Y
+            yaxis=dict(
+                title="",
+                automargin=True
+            )
+        )
+
+        # Sécurité si le texte dépasse
+        fig.update_traces(cliponaxis=False)
+
+        st.plotly_chart(fig, use_container_width=True)
+
+
+    # ===================== COL 3 : OUTPUT 2 =====================
+    with col3:
+        st.subheader("📥 Output 2 (Fine)")
+
+        st.metric("Total Output 2", f"{format_k(total_out2)} T ({pct_out2:.1f}%)")
+        st.metric("Moyenne / Jour", f"{format_k(out2_day_avg)} T/j")
+        st.metric("Moyenne / Mois", f"{format_k(out2_month_avg)} T/mois")
+
+        st.markdown("---")
+
+        out2_rep = (
+            df.groupby('OUTPUT 2 ( type of seconde output )')
+            ['OUTPUT 2 "ton"']
+            .sum()
+            .reset_index()
+            .sort_values('OUTPUT 2 "ton"', ascending=True)
+            # ↑ ascending=True → plus grand en haut (barres horizontales)
+        )
+
+        fig = go.Figure(go.Bar(
+            y=out2_rep['OUTPUT 2 ( type of seconde output )'],
+            x=out2_rep['OUTPUT 2 "ton"'],
+            orientation="h",
+            text=[
+                f"{format_k(v)} T ({v/total_rm*100:.1f}%)"
+                for v in out2_rep['OUTPUT 2 "ton"']
+            ],
+            textposition="outside",
+            marker_color="#4facfe"
+        ))
+
+        fig.update_layout(
+            height=300,
+            margin=dict(l=10, r=10, t=30, b=10),
+
+            # 🚫 Suppression axe X
+            xaxis=dict(
+                showticklabels=False,
+                showgrid=False,
+                zeroline=False,
+                title=""
+            ),
+
+            # Nettoyage axe Y
+            yaxis=dict(
+                title="",
+                automargin=True
+            )
+        )
+
+        # Sécurité si le texte dépasse la zone
+        fig.update_traces(cliponaxis=False)
+
+        st.plotly_chart(fig, use_container_width=True)
 
     
     # ============================================================
@@ -1558,21 +1508,43 @@ elif page == "Analyse temps":  # ← Changé de "Analyse temps" à "temps"
     operating_time_per_day = df.groupby('📆date')['OPERATING TIME'].sum().mean() * 24
     operating_time_per_month = df.groupby(['YEARS', 'MONTH'])['OPERATING TIME'].sum().mean() * 24
     operating_time_pct = (operating_time_total / time_required_total * 100) if time_required_total > 0 else 0
-    
-    # CALCULER directement au lieu de lire les colonnes
+
+    nb_days = df['📆date'].nunique()
+    nb_months = df[['YEARS', 'MONTH']].drop_duplicates().shape[0]
+
     planned_downtime_total = opening_time_total - time_required_total
-    planned_downtime_per_day = (df.groupby('📆date')['OPENING TIME'].sum().mean() - 
-                                df.groupby('📆date')['TIME REQUIRED'].sum().mean()) * 24
-    planned_downtime_per_month = (df.groupby(['YEARS', 'MONTH'])['OPENING TIME'].sum().mean() - 
-                                  df.groupby(['YEARS', 'MONTH'])['TIME REQUIRED'].sum().mean()) * 24
-    planned_downtime_pct = (planned_downtime_total / opening_time_total * 100) if opening_time_total > 0 else 0
-    
+
+    planned_downtime_per_day = (
+        planned_downtime_total / nb_days * 24
+    ) if nb_days > 0 else 0
+
+    planned_downtime_per_month = (
+        planned_downtime_total / nb_months * 24
+    ) if nb_months > 0 else 0
+
+    planned_downtime_pct = (
+        planned_downtime_total / opening_time_total * 100
+    ) if opening_time_total > 0 else 0
+
+
+    # ===============================
+    # UNPLANNED DOWNTIME
+    # ===============================
+
     unplanned_downtime_total = time_required_total - operating_time_total
-    unplanned_downtime_per_day = (df.groupby('📆date')['TIME REQUIRED'].sum().mean() - 
-                                  df.groupby('📆date')['OPERATING TIME'].sum().mean()) * 24
-    unplanned_downtime_per_month = (df.groupby(['YEARS', 'MONTH'])['TIME REQUIRED'].sum().mean() - 
-                                    df.groupby(['YEARS', 'MONTH'])['OPERATING TIME'].sum().mean()) * 24
-    unplanned_downtime_pct = (unplanned_downtime_total / time_required_total * 100) if time_required_total > 0 else 0
+
+    unplanned_downtime_per_day = (
+        unplanned_downtime_total / nb_days * 24
+    ) if nb_days > 0 else 0
+
+    unplanned_downtime_per_month = (
+        unplanned_downtime_total / nb_months * 24
+    ) if nb_months > 0 else 0
+
+    unplanned_downtime_pct = (
+        unplanned_downtime_total / time_required_total * 100
+    ) if time_required_total > 0 else 0
+
     
     with col1:
         st.markdown(create_time_kpi_card(
@@ -2343,9 +2315,8 @@ elif page == "Analyse temps":  # ← Changé de "Analyse temps" à "temps"
             f"👉 Le levier prioritaire d’amélioration est celui ayant le **R² le plus élevé**."
         )
 
-
 # ============================================================
-# 🛠️ PAGE MAINTENANCE
+# 🛠️ PAGE MAINTENANCE - VERSION CORRIGÉE POUR PLOTLY
 # ============================================================
 
 elif page == "maintenance":
@@ -2390,11 +2361,11 @@ elif page == "maintenance":
     
     # KPIs de fiabilité
     # TD (Taux de Disponibilité) = Operating Time / Time Required
-    taux_disponibilite = (operating_time_total / time_required_total * 100) if time_required_total > 0 else 0
+    taux_disponibilite = ((opening_time_total * 24 - maintenance_total_hours) / (opening_time_total * 24) * 100) if opening_time_total > 0 else 0
     
     # MTBF (Mean Time Between Failures) en heures
     # Nombre de pannes = nombre de lignes avec des pannes enregistrées
-    nb_pannes = df[df['Equipment failure 01'].notna()].shape[0]
+    nb_pannes = df['maintenance downtime'].count()
     mtbf = (operating_time_total * 24) / nb_pannes if nb_pannes > 0 else 0
     
     # MTTR (Mean Time To Repair) en heures
@@ -2502,117 +2473,448 @@ elif page == "maintenance":
         </div>
         """, unsafe_allow_html=True)
     
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("<br><br>", unsafe_allow_html=True)
     
     # ============================================================
-    # GRAPHIQUES D'ANALYSE
+    # GRAPHIQUE 1 : PARETO - TEMPS D'ARRÊT PAR ÉQUIPEMENT
     # ============================================================
     
-    col1, col2 = st.columns(2)
+    st.markdown("### 📊 Analyse Pareto - Temps d'Arrêt par Équipement")
+    
+    col1, col2 = st.columns([2, 1])
     
     with col1:
-        st.subheader("🔝 Top Équipements en Panne")
-        pannes = df['Equipment failure 01'].value_counts().head(10).reset_index()
-        pannes.columns = ['Équipement', 'Nombre']
-        fig = px.bar(pannes, x='Nombre', y='Équipement', 
-                    orientation='h', color='Nombre',
-                    color_continuous_scale='Reds')
-        fig.update_layout(height=400)
+        # Préparer les données : combiner les 3 colonnes de pannes
+        equipment_data = []
+        
+        # Parcourir toutes les lignes et collecter les pannes
+        for idx, row in df.iterrows():
+            # Panne 01
+            if pd.notna(row['Equipment failure 01']) and pd.notna(row['Time failure 01']):
+                equipment_data.append({
+                    'Equipment': row['Equipment failure 01'],
+                    'Time': row['Time failure 01'] * 24
+                })
+            
+            # Panne 02
+            if pd.notna(row['Equipment failure 02']) and pd.notna(row['Time failure 02']):
+                equipment_data.append({
+                    'Equipment': row['Equipment failure 02'],
+                    'Time': row['Time failure 02'] * 24
+                })
+            
+            # Panne 03
+            if pd.notna(row['Equipment failure 03']) and pd.notna(row['Time failure 03']):
+                equipment_data.append({
+                    'Equipment': row['Equipment failure 03'],
+                    'Time': row['Time failure 03'] * 24
+                })
+        
+        # Créer DataFrame
+        equipment_df = pd.DataFrame(equipment_data)
+        
+        # Agréger par équipement
+        pareto_data = equipment_df.groupby('Equipment')['Time'].sum().reset_index()
+        pareto_data.columns = ['Équipement', 'Temps_Total']
+        
+        # Trier par ordre décroissant
+        pareto_data = pareto_data.sort_values('Temps_Total', ascending=False).head(15)
+        
+        # Calculer les pourcentages
+        total_time = pareto_data['Temps_Total'].sum()
+        pareto_data['Pourcentage'] = (pareto_data['Temps_Total'] / total_time) * 100
+        pareto_data['Pourcentage_Cumule'] = pareto_data['Pourcentage'].cumsum()
+        
+        # Créer le graphique Pareto
+        fig = go.Figure()
+        
+        # Barres pour le temps d'arrêt
+        fig.add_trace(go.Bar(
+            x=pareto_data['Équipement'],
+            y=pareto_data['Temps_Total'],
+            name='Temps d\'arrêt (h)',
+            marker_color='#667eea',
+            yaxis='y',
+            text=pareto_data['Temps_Total'].round(1),
+            textposition='outside',
+            hovertemplate='<b>%{x}</b><br>Temps: %{y:.1f}h<br>%: %{customdata:.1f}%<extra></extra>',
+            customdata=pareto_data['Pourcentage']
+        ))
+        
+        # Ligne pour le pourcentage cumulé
+        fig.add_trace(go.Scatter(
+            x=pareto_data['Équipement'],
+            y=pareto_data['Pourcentage_Cumule'],
+            name='% Cumulé',
+            line=dict(color='#f5576c', width=3),
+            mode='lines+markers',
+            marker=dict(size=10),
+            yaxis='y2',
+            hovertemplate='<b>%{x}</b><br>Cumulé: %{y:.1f}%<extra></extra>'
+        ))
+        
+        # Ligne 80% (règle de Pareto)
+        fig.add_trace(go.Scatter(
+            x=pareto_data['Équipement'],
+            y=[80] * len(pareto_data),
+            name='Règle 80%',
+            line=dict(color='red', width=2, dash='dash'),
+            yaxis='y2',
+            showlegend=True,
+            hoverinfo='skip'
+        ))
+        
+        # Configuration du layout - CORRECTION ICI
+        fig.update_layout(
+            height=450,
+            xaxis=dict(
+                title='Équipement',
+                tickangle=-45
+            ),
+            yaxis=dict(
+                title=dict(text='Temps d\'arrêt (heures)', font=dict(color='#667eea')),
+                tickfont=dict(color='#667eea'),
+                side='left'
+            ),
+            yaxis2=dict(
+                title=dict(text='Pourcentage cumulé (%)', font=dict(color='#f5576c')),
+                tickfont=dict(color='#f5576c'),
+                overlaying='y',
+                side='right',
+                range=[0, 105]
+            ),
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1
+            ),
+            hovermode='x unified',
+            plot_bgcolor='rgba(240,240,240,0.5)'
+        )
+        
         st.plotly_chart(fig, use_container_width=True)
     
     with col2:
-        st.subheader("📊 Types d'Arrêts")
-        downtime_types = pd.DataFrame({
-            'Type': ['Mécanique', 'Électrique', 'Nettoyage', 'Manque MP', 'Chargement'],
-            'Heures': [
-                df['Mechanical downtime'].sum() * 24,
-                df['Electrical downtime'].sum() * 24,
-                df['stock removal / factory cleaning work'].sum() * 24,
-                df['lack of RM'].sum() * 24,
-                df['NAVIRE LOADING EXPORT'].sum() * 24
-            ]
+        # INTERPRÉTATION DU PARETO
+        st.markdown("#### 📈 Interprétation")
+        
+        # Calculer les équipements représentant 80% des arrêts
+        equipments_80 = pareto_data[pareto_data['Pourcentage_Cumule'] <= 80]
+        nb_equipments_80 = len(equipments_80)
+        total_equipments = len(pareto_data)
+        
+        # Top 3 équipements
+        top3 = pareto_data.head(3)
+        
+        st.markdown(f"""
+        <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                    padding: 20px; border-radius: 10px; color: white; box-shadow: 0 4px 8px rgba(0,0,0,0.1);'>
+            <h4 style='margin-top:0;'>🎯 Principe de Pareto</h4>
+            <p style='font-size: 14px;'>
+                <b>{nb_equipments_80}</b> équipements sur <b>{total_equipments}</b> 
+                représentent <b>80%</b> des temps d'arrêt total.
+            </p>
+            <hr style='border-color: rgba(255,255,255,0.3);'>
+            <p style='font-size: 14px;'><b>🏆 Top 3 Équipements Critiques :</b></p>
+            <ol style='font-size: 13px;'>
+                <li><b>{top3.iloc[0]['Équipement']}</b> : {top3.iloc[0]['Temps_Total']:.1f}h ({top3.iloc[0]['Pourcentage']:.1f}%)</li>
+                <li><b>{top3.iloc[1]['Équipement']}</b> : {top3.iloc[1]['Temps_Total']:.1f}h ({top3.iloc[1]['Pourcentage']:.1f}%)</li>
+                <li><b>{top3.iloc[2]['Équipement']}</b> : {top3.iloc[2]['Temps_Total']:.1f}h ({top3.iloc[2]['Pourcentage']:.1f}%)</li>
+            </ol>
+            <hr style='border-color: rgba(255,255,255,0.3);'>
+            <p style='font-size: 13px;'>
+                💡 <b>Recommandation :</b> Concentrer les efforts de maintenance 
+                préventive sur ces {nb_equipments_80} équipements prioritaires 
+                pour maximiser l'impact sur la disponibilité.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    
+    # ============================================================
+    # GRAPHIQUE 2 : DONUT - COMPARAISON MÉCANIQUE VS ÉLECTRIQUE
+    # ============================================================
+    
+    st.markdown("### ⚙️ Répartition des Pannes : Mécanique vs Électrique")
+    
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        # Calculer les temps totaux
+        mechanical_time = df['Mechanical downtime'].sum() * 24
+        electrical_time = df['Electrical downtime'].sum() * 24
+        
+        # Créer le DataFrame pour le donut
+        donut_data = pd.DataFrame({
+            'Type': ['Pannes Mécaniques', 'Pannes Électriques'],
+            'Heures': [mechanical_time, electrical_time],
+            'Couleur': ['#f5576c', '#4facfe']
         })
-        fig = px.pie(downtime_types, values='Heures', names='Type',
-                    color_discrete_sequence=px.colors.qualitative.Set3)
-        fig.update_layout(height=400)
+        
+        # Créer le graphique donut
+        fig = go.Figure(data=[go.Pie(
+            labels=donut_data['Type'],
+            values=donut_data['Heures'],
+            hole=0.5,
+            marker=dict(colors=donut_data['Couleur']),
+            textinfo='label+percent',
+            textposition='outside',
+            hovertemplate='<b>%{label}</b><br>Heures: %{value:.1f}h<br>Pourcentage: %{percent}<extra></extra>'
+        )])
+        
+        # Ajouter une annotation au centre
+        total_downtime = mechanical_time + electrical_time
+        fig.add_annotation(
+            text=f"<b>Total</b><br>{total_downtime:.1f}h",
+            x=0.5, y=0.5,
+            font=dict(size=20, color='#333'),
+            showarrow=False
+        )
+        
+        fig.update_layout(
+            height=400,
+            showlegend=True,
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=-0.2,
+                xanchor="center",
+                x=0.5
+            )
+        )
+        
         st.plotly_chart(fig, use_container_width=True)
     
+    with col2:
+        # INTERPRÉTATION MÉCANIQUE VS ÉLECTRIQUE
+        st.markdown("#### 🔍 Interprétation")
+        
+        # Calculer les pourcentages
+        pct_mechanical = (mechanical_time / total_downtime) * 100
+        pct_electrical = (electrical_time / total_downtime) * 100
+        
+        # Déterminer le type dominant
+        dominant_type = "Mécaniques" if mechanical_time > electrical_time else "Électriques"
+        dominant_pct = max(pct_mechanical, pct_electrical)
+        
+        # Nombre de pannes par type
+        nb_mechanical = df[df['Mechanical downtime'].notna()].shape[0]
+        nb_electrical = df[df['Electrical downtime'].notna()].shape[0]
+        
+        st.markdown(f"""
+        <div style='background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); 
+                    padding: 20px; border-radius: 10px; color: white; box-shadow: 0 4px 8px rgba(0,0,0,0.1);'>
+            <h4 style='margin-top:0;'>⚡ Analyse Comparative</h4>
+            <div style='background: rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; margin: 10px 0;'>
+                <p style='font-size: 14px; margin: 5px 0;'>
+                    🔧 <b>Mécaniques :</b> {mechanical_time:.1f}h ({pct_mechanical:.1f}%)
+                </p>
+                <p style='font-size: 14px; margin: 5px 0;'>
+                    ⚡ <b>Électriques :</b> {electrical_time:.1f}h ({pct_electrical:.1f}%)
+                </p>
+            </div>
+            <hr style='border-color: rgba(255,255,255,0.3);'>
+            <p style='font-size: 14px;'>
+                <b>Type Dominant :</b> Pannes {dominant_type}<br>
+                Représentent <b>{dominant_pct:.1f}%</b> des arrêts
+            </p>
+            <hr style='border-color: rgba(255,255,255,0.3);'>
+            <p style='font-size: 13px;'>
+                📊 <b>Nombre de pannes :</b><br>
+                • Mécaniques : {nb_mechanical} incidents<br>
+                • Électriques : {nb_electrical} incidents
+            </p>
+            <hr style='border-color: rgba(255,255,255,0.3);'>
+            <p style='font-size: 13px;'>
+                💡 <b>Action prioritaire :</b> Renforcer les compétences et 
+                les ressources de l'équipe de maintenance {dominant_type.lower()} 
+                pour réduire significativement les temps d'arrêt.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    
     # ============================================================
-    # ÉVOLUTION TEMPORELLE
+    # GRAPHIQUE 3 : CONCENTRATION DES ARRÊTS PAR JOUR DE LA SEMAINE
     # ============================================================
     
-    st.subheader("📅 Évolution Temps d'Arrêt")
-    downtime_daily = df.groupby('📆date')[['maintenance downtime', 'Mechanical downtime', 'Electrical downtime']].sum().reset_index()
-    downtime_daily[['maintenance downtime', 'Mechanical downtime', 'Electrical downtime']] *= 24
+    st.markdown("### 📅 Concentration des Arrêts par Jour de la Semaine")
     
-    fig = go.Figure()
-    fig.add_trace(go.Bar(x=downtime_daily['📆date'], y=downtime_daily['maintenance downtime'],
-                        name='Total', marker_color='#667eea'))
-    fig.add_trace(go.Bar(x=downtime_daily['📆date'], y=downtime_daily['Mechanical downtime'],
-                        name='Mécanique', marker_color='#f5576c'))
-    fig.add_trace(go.Bar(x=downtime_daily['📆date'], y=downtime_daily['Electrical downtime'],
-                        name='Électrique', marker_color='#4facfe'))
-    fig.update_layout(barmode='group', height=400, yaxis_title='Heures')
-    st.plotly_chart(fig, use_container_width=True)
-
-# ============================================================
-# 📅 PAGE DATA RANGE
-# ============================================================
-
-elif page == "datarange":
-    st.markdown("<h1 style='text-align: center;'>📅 Data Range - Filtrage</h1>", unsafe_allow_html=True)
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        # Ajouter le jour de la semaine
+        df['DAY_OF_WEEK'] = pd.to_datetime(df['📆date']).dt.day_name()
+        
+        # Agréger par jour de la semaine
+        weekly_downtime = df.groupby('DAY_OF_WEEK').agg({
+            'maintenance downtime': 'sum',
+            'Mechanical downtime': 'sum',
+            'Electrical downtime': 'sum'
+        }).reset_index()
+        
+        # Convertir en heures
+        weekly_downtime['maintenance downtime'] *= 24
+        weekly_downtime['Mechanical downtime'] *= 24
+        weekly_downtime['Electrical downtime'] *= 24
+        
+        # Ordre des jours de la semaine
+        days_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        days_order_fr = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
+        
+        # Réordonner
+        weekly_downtime['DAY_ORDER'] = pd.Categorical(
+            weekly_downtime['DAY_OF_WEEK'], 
+            categories=days_order, 
+            ordered=True
+        )
+        weekly_downtime = weekly_downtime.sort_values('DAY_ORDER')
+        
+        # Mapper vers le français
+        day_mapping = dict(zip(days_order, days_order_fr))
+        weekly_downtime['Jour_FR'] = weekly_downtime['DAY_OF_WEEK'].map(day_mapping)
+        
+        # Créer le graphique empilé
+        fig = go.Figure()
+        
+        # Pannes mécaniques
+        fig.add_trace(go.Bar(
+            x=weekly_downtime['Jour_FR'],
+            y=weekly_downtime['Mechanical downtime'],
+            name='Mécaniques',
+            marker_color='#f5576c',
+            hovertemplate='<b>%{x}</b><br>Mécaniques: %{y:.1f}h<extra></extra>'
+        ))
+        
+        # Pannes électriques
+        fig.add_trace(go.Bar(
+            x=weekly_downtime['Jour_FR'],
+            y=weekly_downtime['Electrical downtime'],
+            name='Électriques',
+            marker_color='#4facfe',
+            hovertemplate='<b>%{x}</b><br>Électriques: %{y:.1f}h<extra></extra>'
+        ))
+        
+        # Ajouter une ligne pour la moyenne
+        mean_downtime = weekly_downtime['maintenance downtime'].mean()
+        fig.add_trace(go.Scatter(
+            x=weekly_downtime['Jour_FR'],
+            y=[mean_downtime] * len(weekly_downtime),
+            name=f'Moyenne ({mean_downtime:.1f}h)',
+            line=dict(color='orange', width=3, dash='dash'),
+            mode='lines',
+            hovertemplate=f'<b>Moyenne</b><br>{mean_downtime:.1f}h<extra></extra>'
+        ))
+        
+        fig.update_layout(
+            barmode='stack',
+            height=400,
+            xaxis_title='Jour de la Semaine',
+            yaxis_title='Temps d\'arrêt (heures)',
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1
+            ),
+            hovermode='x unified',
+            plot_bgcolor='rgba(240,240,240,0.5)'
+        )
+        
+        st.plotly_chart(fig, use_container_width=True)
+    
+    with col2:
+        # INTERPRÉTATION PAR JOUR DE LA SEMAINE
+        st.markdown("#### 📊 Interprétation")
+        
+        # Trouver le jour le plus problématique
+        worst_day_idx = weekly_downtime['maintenance downtime'].idxmax()
+        worst_day = weekly_downtime.loc[worst_day_idx, 'Jour_FR']
+        worst_day_time = weekly_downtime.loc[worst_day_idx, 'maintenance downtime']
+        
+        # Trouver le meilleur jour
+        best_day_idx = weekly_downtime['maintenance downtime'].idxmin()
+        best_day = weekly_downtime.loc[best_day_idx, 'Jour_FR']
+        best_day_time = weekly_downtime.loc[best_day_idx, 'maintenance downtime']
+        
+        # Calculer l'écart
+        variation = ((worst_day_time - best_day_time) / best_day_time) * 100
+        
+        # Jours au-dessus de la moyenne
+        days_above_avg = weekly_downtime[weekly_downtime['maintenance downtime'] > mean_downtime]
+        
+        st.markdown(f"""
+        <div style='background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); 
+                    padding: 20px; border-radius: 10px; color: white; box-shadow: 0 4px 8px rgba(0,0,0,0.1);'>
+            <h4 style='margin-top:0;'>📅 Tendances Hebdomadaires</h4>
+            <div style='background: rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; margin: 10px 0;'>
+                <p style='font-size: 14px; margin: 5px 0;'>
+                    ❌ <b>Pire jour :</b> {worst_day}<br>
+                    {worst_day_time:.1f}h d'arrêts
+                </p>
+                <p style='font-size: 14px; margin: 5px 0;'>
+                    ✅ <b>Meilleur jour :</b> {best_day}<br>
+                    {best_day_time:.1f}h d'arrêts
+                </p>
+            </div>
+            <hr style='border-color: rgba(255,255,255,0.3);'>
+            <p style='font-size: 14px;'>
+                📈 <b>Variation :</b> +{variation:.0f}%<br>
+                Entre le meilleur et le pire jour
+            </p>
+            <hr style='border-color: rgba(255,255,255,0.3);'>
+            <p style='font-size: 13px;'>
+                📊 <b>Jours au-dessus de la moyenne :</b><br>
+                {', '.join(days_above_avg['Jour_FR'].tolist())}
+            </p>
+            <hr style='border-color: rgba(255,255,255,0.3);'>
+            <p style='font-size: 13px;'>
+                💡 <b>Recommandation :</b> Planifier les maintenances préventives 
+                pendant les jours avec moins d'arrêts ({best_day}). 
+                Renforcer les équipes les jours critiques ({worst_day}).
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # ============================================================
+    # RÉSUMÉ STATISTIQUE
+    # ============================================================
+    
     st.markdown("---")
+    st.markdown("### 📋 Résumé Statistique des Analyses")
     
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        date_debut = st.date_input("📅 Date début", value=df['📆date'].min())
+        st.markdown(f"""
+        <div style='background: #667eea; padding: 15px; border-radius: 8px; color: white; text-align: center;'>
+            <h4>🎯 Pareto</h4>
+            <p style='font-size: 24px; font-weight: bold;'>{nb_equipments_80}/{total_equipments}</p>
+            <p style='font-size: 12px;'>Équipements = 80% des arrêts</p>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col2:
-        date_fin = st.date_input("📅 Date fin", value=df['📆date'].max())
+        st.markdown(f"""
+        <div style='background: #f5576c; padding: 15px; border-radius: 8px; color: white; text-align: center;'>
+            <h4>⚙️ Type Dominant</h4>
+            <p style='font-size: 24px; font-weight: bold;'>{dominant_type}</p>
+            <p style='font-size: 12px;'>{dominant_pct:.1f}% des pannes</p>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col3:
-        shifts = df['🛄 shift'].unique().tolist()
-        shift_sel = st.multiselect("🛄 Shift", shifts, default=shifts)
-    
-    operateurs = df['Operator 👷‍♂️:'].unique().tolist()
-    op_sel = st.multiselect("👷‍♂️ Opérateur", operateurs, default=operateurs)
-    
-    df_filtre = df[
-        (df['📆date'] >= pd.to_datetime(date_debut)) &
-        (df['📆date'] <= pd.to_datetime(date_fin)) &
-        (df['🛄 shift'].isin(shift_sel)) &
-        (df['Operator 👷‍♂️:'].isin(op_sel))
-    ]
-    
-    st.markdown(f"### 📊 Résultats : {len(df_filtre)} lignes")
-    
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.metric("🏭 Production", f"{format_number_full(df_filtre['Total Prod ( RM consumption ) \"ton\"'].sum())} T")
-    
-    with col2:
-        st.metric("🎯 OEE Moyen", f"{df_filtre['%OEE'].mean()*100:.1f}%")
-    
-    with col3:
-        st.metric("⚡ Taux Prod.", f"{df_filtre['Production Rate t/h'].mean():.1f} T/h")
-    
-    with col4:
-        st.metric("⏱️ Temps Arrêt", f"{df_filtre['maintenance downtime'].sum()*24:.1f}h")
-    
-    st.markdown("### 📋 Données Filtrées")
-    st.dataframe(df_filtre, use_container_width=True, height=400)
-    
-    csv = df_filtre.to_csv(index=False).encode('utf-8')
-    st.download_button(
-        label="📥 Télécharger CSV",
-        data=csv,
-        file_name=f'export_ncc2_{date_debut}_{date_fin}.csv',
-        mime='text/csv',
-    )
-
-elif page == "logout":
-    st.session_state.start_time = None
-    st.session_state.page = "overview"
-    st.rerun()
+        st.markdown(f"""
+        <div style='background: #4facfe; padding: 15px; border-radius: 8px; color: white; text-align: center;'>
+            <h4>📅 Jour Critique</h4>
+            <p style='font-size: 24px; font-weight: bold;'>{worst_day}</p>
+            <p style='font-size: 12px;'>{worst_day_time:.1f}h d'arrêts</p>
+        </div>
+        """, unsafe_allow_html=True)
