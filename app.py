@@ -315,169 +315,219 @@ elif page == "production":
     # LIGNE 01 — KPIs + GRAPHES (STYLE POWER BI)
     # ============================================================
 
-    col1, col2, col3 = st.columns(3)
+    # ============================================================
+# FONCTION POUR CRÉER LES CARTES HTML STYLISÉES
+# ============================================================
 
-    # ===================== COL 1 : RAW MATERIAL =====================
-    with col1:
-        st.subheader("📦 Raw Material")
+def create_material_kpi_card(title, icon, total_value, avg_day, avg_month, percentage=None, color="#667eea"):
+    """
+    Crée une carte KPI stylisée pour les matériaux/outputs
+    """
+    percentage_section = ""
+    if percentage is not None:
+        percentage_section = f"""
+        <div style="background: rgba(16,185,129,0.15); border-radius:8px; padding:8px; text-align:center;">
+            <div style="font-size:9px; color:#047857;">% DU TOTAL RM</div>
+            <div style="font-size:15px; font-weight:800; color:#10b981;">{percentage:.1f} %</div>
+        </div>
+        """
+    
+    html_content = f"""
+    <div style="background: rgba(120,120,120,0.10); border: 1px solid rgba(200,200,200,0.35); border-radius: 14px; padding: 14px 16px; height: 240px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 3px 12px rgba(0,0,0,0.08);">
+        <div style="display:flex; align-items:center; gap:8px;">
+            <div style="font-size:18px;">{icon}</div>
+            <div style="font-size:12px; font-weight:600; color:#555; text-transform: uppercase;">{title}</div>
+        </div>
+        <div style="font-size:34px; font-weight:800; color:#111; text-align:center; margin: 6px 0;">
+            {total_value} <span style="font-size:14px;">T</span>
+        </div>
+        <div style="display:flex; gap:10px;">
+            <div style="flex:1; background: rgba(160,160,160,0.12); border-radius:8px; padding:8px; text-align:center;">
+                <div style="font-size:9px; color:#666;">MOY / JOUR</div>
+                <div style="font-size:13px; font-weight:700;">{avg_day} T/j</div>
+            </div>
+            <div style="flex:1; background: rgba(160,160,160,0.12); border-radius:8px; padding:8px; text-align:center;">
+                <div style="font-size:9px; color:#666;">MOY / MOIS</div>
+                <div style="font-size:13px; font-weight:700;">{avg_month} T/mois</div>
+            </div>
+        </div>
+        {percentage_section}
+    </div>
+    """
+    return html_content
 
-        st.metric("Total RM", f"{format_k(total_rm)} T")
-        st.metric("Moyenne / Jour", f"{format_k(rm_day_avg)} T/j")
-        st.metric("Moyenne / Mois", f"{format_k(rm_month_avg)} T/mois")
-        st.markdown("---")
 
-        rm_rep = (
-            df.groupby('Input( Raw material type )')
-            ['Total Prod ( RM consumption ) "ton"']
-            .sum()
-            .reset_index()
-            .sort_values('Total Prod ( RM consumption ) "ton"', ascending=True)  
-            # ← important : ascending=True pour avoir le plus grand en haut en horizontal
+# ============================================================
+# CODE PRINCIPAL AVEC LES 3 COLONNES
+# ============================================================
+
+col1, col2, col3 = st.columns(3)
+
+# ===================== COL 1 : RAW MATERIAL =====================
+with col1:
+    # Carte KPI HTML
+    card_html = create_material_kpi_card(
+        title="📦 Raw Material",
+        icon="📦",
+        total_value=format_k(total_rm),
+        avg_day=format_k(rm_day_avg),
+        avg_month=format_k(rm_month_avg),
+        color="#667eea"
+    )
+    st.markdown(card_html, unsafe_allow_html=True)
+    
+    st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
+    
+    # Graphique
+    rm_rep = (
+        df.groupby('Input( Raw material type )')
+        ['Total Prod ( RM consumption ) "ton"']
+        .sum()
+        .reset_index()
+        .sort_values('Total Prod ( RM consumption ) "ton"', ascending=True)
+    )
+
+    fig = go.Figure(go.Bar(
+        y=rm_rep['Input( Raw material type )'],
+        x=rm_rep['Total Prod ( RM consumption ) "ton"'],
+        orientation="h",
+        text=[
+            f"{format_k(v)} T ({v/total_rm*100:.1f}%)"
+            for v in rm_rep['Total Prod ( RM consumption ) "ton"']
+        ],
+        textposition="outside",
+        marker_color="#667eea"
+    ))
+
+    fig.update_layout(
+        height=300,
+        margin=dict(l=10, r=10, t=30, b=10),
+        xaxis=dict(
+            showticklabels=False,
+            showgrid=False,
+            zeroline=False,
+            title=""
+        ),
+        yaxis=dict(
+            title="",
+            automargin=True
         )
+    )
 
-        fig = go.Figure(go.Bar(
-            y=rm_rep['Input( Raw material type )'],
-            x=rm_rep['Total Prod ( RM consumption ) "ton"'],
-            orientation="h",
-            text=[
-                f"{format_k(v)} T ({v/total_rm*100:.1f}%)"
-                for v in rm_rep['Total Prod ( RM consumption ) "ton"']
-            ],
-            textposition="outside",
-            marker_color="#667eea"
-        ))
+    st.plotly_chart(fig, use_container_width=True)
 
-        fig.update_layout(
-            height=300,
-            margin=dict(l=10, r=10, t=30, b=10),
 
-            # 🚫 Suppression de l’axe X
-            xaxis=dict(
-                showticklabels=False,
-                showgrid=False,
-                zeroline=False,
-                title=""
-            ),
+# ===================== COL 2 : OUTPUT 1 =====================
+with col2:
+    # Carte KPI HTML
+    card_html = create_material_kpi_card(
+        title="📤 Output 1 (Export)",
+        icon="📤",
+        total_value=format_k(total_out1),
+        avg_day=format_k(out1_day_avg),
+        avg_month=format_k(out1_month_avg),
+        percentage=pct_out1,
+        color="#f5576c"
+    )
+    st.markdown(card_html, unsafe_allow_html=True)
+    
+    st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
+    
+    # Graphique
+    out1_rep = (
+        df.groupby('OUTPUT 1 ( type of export product )')
+        ['OUTPUT 1 "ton"']
+        .sum()
+        .reset_index()
+        .sort_values('OUTPUT 1 "ton"', ascending=True)
+    )
 
-            # Nettoyage axe Y
-            yaxis=dict(
-                title="",
-                automargin=True
-            )
+    fig = go.Figure(go.Bar(
+        y=out1_rep['OUTPUT 1 ( type of export product )'],
+        x=out1_rep['OUTPUT 1 "ton"'],
+        orientation="h",
+        text=[
+            f"{format_k(v)} T ({v/total_rm*100:.1f}%)"
+            for v in out1_rep['OUTPUT 1 "ton"']
+        ],
+        textposition="outside",
+        marker_color="#f5576c"
+    ))
+
+    fig.update_layout(
+        height=300,
+        margin=dict(l=10, r=10, t=30, b=10),
+        xaxis=dict(
+            showticklabels=False,
+            showgrid=False,
+            zeroline=False,
+            title=""
+        ),
+        yaxis=dict(
+            title="",
+            automargin=True
         )
+    )
 
-        st.plotly_chart(fig, use_container_width=True)
+    fig.update_traces(cliponaxis=False)
+    st.plotly_chart(fig, use_container_width=True)
 
-    # ===================== COL 2 : OUTPUT 1 =====================
-    with col2:
-        st.subheader("📤 Output 1 (Export)")
 
-        st.metric("Total Output 1", f"{format_k(total_out1)} T ({pct_out1:.1f}%)")
-        st.metric("Moyenne / Jour", f"{format_k(out1_day_avg)} T/j")
-        st.metric("Moyenne / Mois", f"{format_k(out1_month_avg)} T/mois")
+# ===================== COL 3 : OUTPUT 2 =====================
+with col3:
+    # Carte KPI HTML
+    card_html = create_material_kpi_card(
+        title="📥 Output 2 (Fine)",
+        icon="📥",
+        total_value=format_k(total_out2),
+        avg_day=format_k(out2_day_avg),
+        avg_month=format_k(out2_month_avg),
+        percentage=pct_out2,
+        color="#4facfe"
+    )
+    st.markdown(card_html, unsafe_allow_html=True)
+    
+    st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
+    
+    # Graphique
+    out2_rep = (
+        df.groupby('OUTPUT 2 ( type of seconde output )')
+        ['OUTPUT 2 "ton"']
+        .sum()
+        .reset_index()
+        .sort_values('OUTPUT 2 "ton"', ascending=True)
+    )
 
-        st.markdown("---")
+    fig = go.Figure(go.Bar(
+        y=out2_rep['OUTPUT 2 ( type of seconde output )'],
+        x=out2_rep['OUTPUT 2 "ton"'],
+        orientation="h",
+        text=[
+            f"{format_k(v)} T ({v/total_rm*100:.1f}%)"
+            for v in out2_rep['OUTPUT 2 "ton"']
+        ],
+        textposition="outside",
+        marker_color="#4facfe"
+    ))
 
-        out1_rep = (
-            df.groupby('OUTPUT 1 ( type of export product )')
-            ['OUTPUT 1 "ton"']
-            .sum()
-            .reset_index()
-            .sort_values('OUTPUT 1 "ton"', ascending=True)
-            # ↑ ascending=True pour afficher le plus grand en haut
+    fig.update_layout(
+        height=300,
+        margin=dict(l=10, r=10, t=30, b=10),
+        xaxis=dict(
+            showticklabels=False,
+            showgrid=False,
+            zeroline=False,
+            title=""
+        ),
+        yaxis=dict(
+            title="",
+            automargin=True
         )
+    )
 
-        fig = go.Figure(go.Bar(
-            y=out1_rep['OUTPUT 1 ( type of export product )'],
-            x=out1_rep['OUTPUT 1 "ton"'],
-            orientation="h",
-            text=[
-                f"{format_k(v)} T ({v/total_rm*100:.1f}%)"
-                for v in out1_rep['OUTPUT 1 "ton"']
-            ],
-            textposition="outside",
-            marker_color="#f5576c"
-        ))
+    fig.update_traces(cliponaxis=False)
+    st.plotly_chart(fig, use_container_width=True)
 
-        fig.update_layout(
-            height=300,
-            margin=dict(l=10, r=10, t=30, b=10),
-
-            # 🚫 Suppression axe X
-            xaxis=dict(
-                showticklabels=False,
-                showgrid=False,
-                zeroline=False,
-                title=""
-            ),
-
-            # Nettoyage axe Y
-            yaxis=dict(
-                title="",
-                automargin=True
-            )
-        )
-
-        # Sécurité si le texte dépasse
-        fig.update_traces(cliponaxis=False)
-
-        st.plotly_chart(fig, use_container_width=True)
-
-
-    # ===================== COL 3 : OUTPUT 2 =====================
-    with col3:
-        st.subheader("📥 Output 2 (Fine)")
-
-        st.metric("Total Output 2", f"{format_k(total_out2)} T ({pct_out2:.1f}%)")
-        st.metric("Moyenne / Jour", f"{format_k(out2_day_avg)} T/j")
-        st.metric("Moyenne / Mois", f"{format_k(out2_month_avg)} T/mois")
-
-        st.markdown("---")
-
-        out2_rep = (
-            df.groupby('OUTPUT 2 ( type of seconde output )')
-            ['OUTPUT 2 "ton"']
-            .sum()
-            .reset_index()
-            .sort_values('OUTPUT 2 "ton"', ascending=True)
-            # ↑ ascending=True → plus grand en haut (barres horizontales)
-        )
-
-        fig = go.Figure(go.Bar(
-            y=out2_rep['OUTPUT 2 ( type of seconde output )'],
-            x=out2_rep['OUTPUT 2 "ton"'],
-            orientation="h",
-            text=[
-                f"{format_k(v)} T ({v/total_rm*100:.1f}%)"
-                for v in out2_rep['OUTPUT 2 "ton"']
-            ],
-            textposition="outside",
-            marker_color="#4facfe"
-        ))
-
-        fig.update_layout(
-            height=300,
-            margin=dict(l=10, r=10, t=30, b=10),
-
-            # 🚫 Suppression axe X
-            xaxis=dict(
-                showticklabels=False,
-                showgrid=False,
-                zeroline=False,
-                title=""
-            ),
-
-            # Nettoyage axe Y
-            yaxis=dict(
-                title="",
-                automargin=True
-            )
-        )
-
-        # Sécurité si le texte dépasse la zone
-        fig.update_traces(cliponaxis=False)
-
-        st.plotly_chart(fig, use_container_width=True)
 
     
     # ============================================================
@@ -2302,21 +2352,161 @@ elif page == "maintenance":
     st.markdown("<h1 style='text-align: center;'>🛠️ Maintenance - Analyse des Pannes</h1>", unsafe_allow_html=True)
     st.markdown("---")
     
-    col1, col2, col3 = st.columns(3)
+    # ============================================================
+    # CALCULS DES KPIs DE MAINTENANCE
+    # ============================================================
     
+    # Calculs généraux
+    maintenance_total_hours = df['maintenance downtime'].sum() * 24
+    mechanical_total_hours = df['Mechanical downtime'].sum() * 24
+    electrical_total_hours = df['Electrical downtime'].sum() * 24
+    
+    opening_time_total = df['OPENING TIME'].sum()
+    time_required_total = df['TIME REQUIRED'].sum()
+    operating_time_total = df['OPERATING TIME'].sum()
+    
+    # Pourcentages par rapport à Opening Time et Time Required
+    pct_maintenance_opening = (df['maintenance downtime'].sum() / opening_time_total * 100) if opening_time_total > 0 else 0
+    pct_maintenance_required = (df['maintenance downtime'].sum() / time_required_total * 100) if time_required_total > 0 else 0
+    
+    pct_mechanical_opening = (df['Mechanical downtime'].sum() / opening_time_total * 100) if opening_time_total > 0 else 0
+    pct_mechanical_required = (df['Mechanical downtime'].sum() / time_required_total * 100) if time_required_total > 0 else 0
+    
+    pct_electrical_opening = (df['Electrical downtime'].sum() / opening_time_total * 100) if opening_time_total > 0 else 0
+    pct_electrical_required = (df['Electrical downtime'].sum() / time_required_total * 100) if time_required_total > 0 else 0
+    
+    # Moyennes mensuelles et journalières
+    nombre_jours = df['📆date'].nunique()
+    nombre_mois = df['MONTH'].nunique() if nombre_jours > 0 else 1
+    
+    avg_maintenance_per_month = maintenance_total_hours / nombre_mois
+    avg_maintenance_per_day = maintenance_total_hours / nombre_jours
+    
+    avg_mechanical_per_month = mechanical_total_hours / nombre_mois
+    avg_mechanical_per_day = mechanical_total_hours / nombre_jours
+    
+    avg_electrical_per_month = electrical_total_hours / nombre_mois
+    avg_electrical_per_day = electrical_total_hours / nombre_jours
+    
+    # KPIs de fiabilité
+    # TD (Taux de Disponibilité) = Operating Time / Time Required
+    taux_disponibilite = (operating_time_total / time_required_total * 100) if time_required_total > 0 else 0
+    
+    # MTBF (Mean Time Between Failures) en heures
+    # Nombre de pannes = nombre de lignes avec des pannes enregistrées
+    nb_pannes = df[df['Equipment failure 01'].notna()].shape[0]
+    mtbf = (operating_time_total * 24) / nb_pannes if nb_pannes > 0 else 0
+    
+    # MTTR (Mean Time To Repair) en heures
+    # Temps moyen de réparation par panne
+    mttr = maintenance_total_hours / nb_pannes if nb_pannes > 0 else 0
+    
+    # ============================================================
+    # AFFICHAGE DES CARTES KPIs
+    # ============================================================
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    # CARTE 1 : MAINTENANCE TOTALE
     with col1:
-        downtime_total = df['maintenance downtime'].sum() * 24
-        st.metric("⏱️ Temps d'Arrêt Total", f"{downtime_total:.1f}h")
+        st.markdown(f"""
+        <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                    padding: 18px; border-radius: 12px; color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.15);'>
+            <div style='font-size: 16px; font-weight: 600; margin-bottom: 12px; border-bottom: 2px solid rgba(255,255,255,0.3); padding-bottom: 8px;'>
+                ⏱️ MAINTENANCE TOTALE
+            </div>
+            <div style='font-size: 28px; font-weight: bold; margin: 8px 0;'>{maintenance_total_hours:.1f}h</div>
+            <div style='font-size: 13px; opacity: 0.9; margin: 4px 0;'>
+                📊 {pct_maintenance_opening:.1f}% vs Opening Time
+            </div>
+            <div style='font-size: 13px; opacity: 0.9; margin: 4px 0;'>
+                📋 {pct_maintenance_required:.1f}% vs Time Required
+            </div>
+            <div style='font-size: 13px; opacity: 0.9; margin: 4px 0; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 6px;'>
+                📅 {avg_maintenance_per_month:.1f}h/mois
+            </div>
+            <div style='font-size: 13px; opacity: 0.9; margin: 4px 0;'>
+                🗓️ {avg_maintenance_per_day:.1f}h/jour
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
     
+    # CARTE 2 : PANNES MÉCANIQUES
     with col2:
-        meca_down = df['Mechanical downtime'].sum() * 24
-        st.metric("🔧 Pannes Mécaniques", f"{meca_down:.1f}h")
+        st.markdown(f"""
+        <div style='background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); 
+                    padding: 18px; border-radius: 12px; color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.15);'>
+            <div style='font-size: 16px; font-weight: 600; margin-bottom: 12px; border-bottom: 2px solid rgba(255,255,255,0.3); padding-bottom: 8px;'>
+                🔧 PANNES MÉCANIQUES
+            </div>
+            <div style='font-size: 28px; font-weight: bold; margin: 8px 0;'>{mechanical_total_hours:.1f}h</div>
+            <div style='font-size: 13px; opacity: 0.9; margin: 4px 0;'>
+                📊 {pct_mechanical_opening:.1f}% vs Opening Time
+            </div>
+            <div style='font-size: 13px; opacity: 0.9; margin: 4px 0;'>
+                📋 {pct_mechanical_required:.1f}% vs Time Required
+            </div>
+            <div style='font-size: 13px; opacity: 0.9; margin: 4px 0; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 6px;'>
+                📅 {avg_mechanical_per_month:.1f}h/mois
+            </div>
+            <div style='font-size: 13px; opacity: 0.9; margin: 4px 0;'>
+                🗓️ {avg_mechanical_per_day:.1f}h/jour
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
     
+    # CARTE 3 : PANNES ÉLECTRIQUES
     with col3:
-        elec_down = df['Electrical downtime'].sum() * 24
-        st.metric("⚡ Pannes Électriques", f"{elec_down:.1f}h")
+        st.markdown(f"""
+        <div style='background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); 
+                    padding: 18px; border-radius: 12px; color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.15);'>
+            <div style='font-size: 16px; font-weight: 600; margin-bottom: 12px; border-bottom: 2px solid rgba(255,255,255,0.3); padding-bottom: 8px;'>
+                ⚡ PANNES ÉLECTRIQUES
+            </div>
+            <div style='font-size: 28px; font-weight: bold; margin: 8px 0;'>{electrical_total_hours:.1f}h</div>
+            <div style='font-size: 13px; opacity: 0.9; margin: 4px 0;'>
+                📊 {pct_electrical_opening:.1f}% vs Opening Time
+            </div>
+            <div style='font-size: 13px; opacity: 0.9; margin: 4px 0;'>
+                📋 {pct_electrical_required:.1f}% vs Time Required
+            </div>
+            <div style='font-size: 13px; opacity: 0.9; margin: 4px 0; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 6px;'>
+                📅 {avg_electrical_per_month:.1f}h/mois
+            </div>
+            <div style='font-size: 13px; opacity: 0.9; margin: 4px 0;'>
+                🗓️ {avg_electrical_per_day:.1f}h/jour
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # CARTE 4 : KPIs DE FIABILITÉ
+    with col4:
+        st.markdown(f"""
+        <div style='background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); 
+                    padding: 18px; border-radius: 12px; color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.15);'>
+            <div style='font-size: 16px; font-weight: 600; margin-bottom: 12px; border-bottom: 2px solid rgba(255,255,255,0.3); padding-bottom: 8px;'>
+                📈 FIABILITÉ
+            </div>
+            <div style='font-size: 14px; font-weight: 600; margin: 8px 0; padding: 6px; background: rgba(255,255,255,0.2); border-radius: 6px;'>
+                TD: {taux_disponibilite:.1f}%
+            </div>
+            <div style='font-size: 14px; font-weight: 600; margin: 8px 0; padding: 6px; background: rgba(255,255,255,0.2); border-radius: 6px;'>
+                MTBF: {mtbf:.1f}h
+            </div>
+            <div style='font-size: 14px; font-weight: 600; margin: 8px 0; padding: 6px; background: rgba(255,255,255,0.2); border-radius: 6px;'>
+                MTTR: {mttr:.1f}h
+            </div>
+            <div style='font-size: 12px; opacity: 0.9; margin-top: 8px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.2);'>
+                🔢 Nb pannes: {nb_pannes}
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
     
     st.markdown("<br>", unsafe_allow_html=True)
+    
+    # ============================================================
+    # GRAPHIQUES D'ANALYSE
+    # ============================================================
     
     col1, col2 = st.columns(2)
     
@@ -2327,6 +2517,7 @@ elif page == "maintenance":
         fig = px.bar(pannes, x='Nombre', y='Équipement', 
                     orientation='h', color='Nombre',
                     color_continuous_scale='Reds')
+        fig.update_layout(height=400)
         st.plotly_chart(fig, use_container_width=True)
     
     with col2:
@@ -2341,8 +2532,14 @@ elif page == "maintenance":
                 df['NAVIRE LOADING EXPORT'].sum() * 24
             ]
         })
-        fig = px.pie(downtime_types, values='Heures', names='Type')
+        fig = px.pie(downtime_types, values='Heures', names='Type',
+                    color_discrete_sequence=px.colors.qualitative.Set3)
+        fig.update_layout(height=400)
         st.plotly_chart(fig, use_container_width=True)
+    
+    # ============================================================
+    # ÉVOLUTION TEMPORELLE
+    # ============================================================
     
     st.subheader("📅 Évolution Temps d'Arrêt")
     downtime_daily = df.groupby('📆date')[['maintenance downtime', 'Mechanical downtime', 'Electrical downtime']].sum().reset_index()
